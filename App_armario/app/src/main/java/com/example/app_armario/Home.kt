@@ -25,89 +25,158 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import com.example.app_armario.Models.Producto
+import com.example.app_armario.data.productosMock
+import androidx.compose.ui.graphics.Color
 
-// ===== Modelo de producto =====
-data class Product(
-    val id: String,
-    val name: String,
-    val price: String,
-    val assetPath: String
-)
-
-// ===== Pantalla principal =====
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Home(navController: NavHostController) {
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
     val products by remember { mutableStateOf(loadHomeProducts()) }
     val carouselAssets = listOf(
         "img/fotoCarusel.1.png",
         "img/fotoCarusel.2.png"
     )
 
-    Scaffold(
-        topBar = { TopBar(navController) },
-    ) { inner ->
-        Column(
-            modifier = Modifier
-                .padding(inner)
-                .fillMaxSize()
-        ) {
-            CarouselAssets(images = carouselAssets)
+    // 🧩 Envolvemos todo en un ModalNavigationDrawer
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            DrawerContent(navController, onClose = { scope.launch { drawerState.close() } })
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            "Armario de Sombras",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menú")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { navController.navigate("login") }) {
+                            AsyncImage(
+                                model = "file:///android_asset/img/user.png",
+                                contentDescription = "Iniciar sesión",
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .padding(2.dp)
+                            )
+                        }
+                        IconButton(onClick = { navController.navigate("registro") }) {
+                            Icon(Icons.Default.FavoriteBorder, contentDescription = "Registro")
+                        }
+                        IconButton(onClick = { /* TODO: Carrito */ }) {
+                            Icon(Icons.Default.ShoppingCart, contentDescription = "Carrito")
+                        }
+                    }
+                )
+            }
+        ) { inner ->
+            Column(
+                modifier = Modifier
+                    .padding(inner)
+                    .fillMaxSize()
+            ) {
+                CarouselAssets(images = carouselAssets)
 
-            Text(
-                text = "Conoce los nuevos productos",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)
-            )
-            Text(
-                text = "Lo mejor del estilo dark/rock para tu outfit.",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-            )
+                Text(
+                    text = "Conoce los nuevos productos",
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                )
 
-            Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Lo mejor del estilo dark/rock para tu outfit.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
 
-            ProductGrid(products = products, modifier = Modifier.weight(1f))
-
-            Footer()
+                Spacer(Modifier.height(8.dp))
+                ProductGrid(products = products, modifier = Modifier.weight(1f))
+                Footer()
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TopBar(navController: NavHostController) {
-    TopAppBar(
-        title = {
-            Text(
-                "Armario de Sombras",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = { /* abrir menú */ }) {
-                Icon(Icons.Default.Menu, contentDescription = "Menú")
-            }
-        },
-        actions = {
-            IconButton(onClick = { navController.navigate("login") }) {
-                AsyncImage(
-                    model = "file:///android_asset/img/user.png",
-                    contentDescription = "Iniciar sesión",
-                    modifier = Modifier
-                        .size(26.dp)
-                        .padding(2.dp)
-                )
-            }
-            IconButton(onClick = { navController.navigate("registro") }) {
-                Icon(Icons.Default.FavoriteBorder, contentDescription = "Registro")
-            }
-            IconButton(onClick = { /* carro */ }) {
-                Icon(Icons.Default.ShoppingCart, contentDescription = "Carrito")
-            }
+private fun DrawerContent(navController: NavHostController, onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF121212))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Top
+    ) {
+        Text(
+            "Menú principal",
+            color = Color.White,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        Divider(color = Color(0xFFB32DD4))
+
+        Spacer(Modifier.height(12.dp))
+
+        DrawerItem("🏠 Inicio") {
+            navController.navigate("home")
+            onClose()
         }
 
+        DrawerItem("🛍 Productos") {
+            navController.navigate("productos")
+            onClose()
+        }
 
-    )
+        DrawerItem("❤️ Favoritos") {
+            navController.navigate("favoritos")
+            onClose()
+        }
+
+        DrawerItem("👤 Mi cuenta") {
+            navController.navigate("login")
+            onClose()
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        Divider(color = Color.Gray)
+        Text(
+            "© ${java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)} Armario de Sombras",
+            color = Color.Gray,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(top = 12.dp)
+        )
+    }
+}
+
+@Composable
+private fun DrawerItem(text: String, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text,
+            color = Color.White,
+            fontSize = 16.sp,
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
 
 @Composable
@@ -158,7 +227,7 @@ private fun CarouselAssets(images: List<String>, autoScrollMs: Long = 2500L) {
 }
 
 @Composable
-private fun ProductGrid(products: List<Product>, modifier: Modifier = Modifier) {
+private fun ProductGrid(products: List<Producto>, modifier: Modifier = Modifier) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 160.dp),
         modifier = modifier.padding(horizontal = 12.dp)
@@ -170,7 +239,7 @@ private fun ProductGrid(products: List<Product>, modifier: Modifier = Modifier) 
 }
 
 @Composable
-private fun ProductCard(p: Product) {
+private fun ProductCard(p: Producto) {
     Card(
         modifier = Modifier
             .padding(8.dp)
@@ -178,20 +247,17 @@ private fun ProductCard(p: Product) {
         shape = MaterialTheme.shapes.large
     ) {
         Column {
-            AssetImage(
-                assetPath = p.assetPath,
-                contentDescription = p.name,
+            AsyncImage(
+                model = p.imagenUrl ?: "file:///android_asset/img/default.png",
+                contentDescription = p.nombre,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(160.dp)
             )
             Column(Modifier.padding(12.dp)) {
-                Text(p.name, fontWeight = FontWeight.SemiBold)
-                Text(p.price, color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
-                Button(
-                    onClick = { /* agregar al carro */ },
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
+                Text(p.nombre, fontWeight = FontWeight.SemiBold)
+                Text("$${p.precio}", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
+                Button(onClick = { /* agregar al carro */ }, modifier = Modifier.padding(top = 8.dp)) {
                     Text("Agregar")
                 }
             }
@@ -235,11 +301,4 @@ private fun Footer() {
     }
 }
 
-private fun loadHomeProducts(): List<Product> = listOf(
-    Product("1", "Polera Iron Maiden", "$12.990", "img/PoleraIron.jpg"),
-    Product("2", "Polera Slipknot", "$12.990", "img/PoleraSlip.jpg"),
-    Product("3", "Calza Baphomet", "$13.990", "img/CalzaBap.jpg"),
-    Product("4", "Falda Baphomet", "$14.990", "img/FaldaBap.png"),
-    Product("5", "Chocker Calavera", "$6.990", "img/ChockerCalavera.jpg"),
-    Product("6", "Cinturón Tachas", "$9.990", "img/Cinturon.jpg"),
-)
+private fun loadHomeProducts(): List<Producto> = productosMock.takeLast(4)

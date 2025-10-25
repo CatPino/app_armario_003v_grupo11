@@ -16,6 +16,9 @@ fun AppNavigation() {
         composable("home") { Home(navController) }
         composable("registro") { Registro(navController) }
         composable("login") { Login(navController) }
+        composable("productos") { Productos(navController) }
+
+
     }
 }
 
