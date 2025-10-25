@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
@@ -35,7 +36,7 @@ data class Product(
 
 // ===== Pantalla principal =====
 @Composable
-fun Home() {
+fun Home(navController: NavHostController) {
     val products by remember { mutableStateOf(loadHomeProducts()) }
     val carouselAssets = listOf(
         "img/fotoCarusel.1.png",
@@ -43,7 +44,7 @@ fun Home() {
     )
 
     Scaffold(
-        topBar = { TopBar() },
+        topBar = { TopBar(navController) },
     ) { inner ->
         Column(
             modifier = Modifier
@@ -74,7 +75,7 @@ fun Home() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TopBar() {
+private fun TopBar(navController: NavHostController) {
     TopAppBar(
         title = {
             Text(
@@ -88,13 +89,24 @@ private fun TopBar() {
             }
         },
         actions = {
-            IconButton(onClick = { /* favoritos */ }) {
-                Icon(Icons.Default.FavoriteBorder, contentDescription = "Favoritos")
+            IconButton(onClick = { navController.navigate("login") }) {
+                AsyncImage(
+                    model = "file:///android_asset/img/user.png",
+                    contentDescription = "Iniciar sesión",
+                    modifier = Modifier
+                        .size(26.dp)
+                        .padding(2.dp)
+                )
+            }
+            IconButton(onClick = { navController.navigate("registro") }) {
+                Icon(Icons.Default.FavoriteBorder, contentDescription = "Registro")
             }
             IconButton(onClick = { /* carro */ }) {
-                Icon(Icons.Default.ShoppingCart, contentDescription = "Carro")
+                Icon(Icons.Default.ShoppingCart, contentDescription = "Carrito")
             }
         }
+
+
     )
 }
 
