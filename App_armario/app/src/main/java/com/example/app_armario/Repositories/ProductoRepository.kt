@@ -2,7 +2,6 @@ package com.example.app_armario.Repositories
 
 import android.content.Context
 import com.example.app_armario.Models.Producto
-import com.example.app_armario.Models.Categoria
 import com.example.app_armario.dataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -52,6 +51,21 @@ class ProductoRepository(private val context: Context) {
         val nuevaLista = getProductos().filter { it.id != id }
         context.dataStore.edit { prefs ->
             prefs[productoKey] = Json.encodeToString(nuevaLista)
+        }
+    }
+
+
+    fun descontarStock(idProducto: Long, cantidadVendida: Int) = runBlocking {
+        val lista = getProductos().toMutableList()
+        val index = lista.indexOfFirst { it.id == idProducto }
+        if (index != -1) {
+            val producto = lista[index]
+            val nuevoStock = (producto.stock - cantidadVendida).coerceAtLeast(0) // evita negativos
+            lista[index] = producto.copy(stock = nuevoStock)
+
+            context.dataStore.edit { prefs ->
+                prefs[productoKey] = Json.encodeToString(lista)
+            }
         }
     }
 }

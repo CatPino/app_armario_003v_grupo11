@@ -16,6 +16,7 @@ class MainActivity : ComponentActivity() {
 
         //  Crear admin si no existe
         crearAdminInicial(this)
+        seedProductosSiVacio(this)
 
         setContent {
             App_armarioTheme {
