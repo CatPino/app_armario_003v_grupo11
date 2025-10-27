@@ -11,12 +11,21 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = "home"
+        startDestination = "splash"
     ) {
+        composable("splash")   { SplashScreen(navController) }
         composable("home") { Home(navController) }
         composable("registro") { Registro(navController) }
         composable("login") { Login(navController) }
         composable("productos") { Productos(navController) }
+        composable("admin_dashboard") { AdminDashboard(navController) }
+        composable("carrito") { Carrito(navController) }
+        composable("ventas_historial") { VentasHistorial(navController) }
+        composable("mi_cuenta") { MiCuenta(navController) }
+
+
+
+
 
 
     }

@@ -13,7 +13,7 @@ fun crearAdminInicial(context: Context) {
         val admin = Usuario(
             nombre = "Administrador",
             email = "admin@gmail.com",
-            password = "admin123#",
+            password = "Admin123#",
             rol = RolesPredefinidos.ADMIN
         )
         repo.agregarUsuario(admin)
