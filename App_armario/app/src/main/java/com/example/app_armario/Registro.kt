@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -27,14 +28,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.TextStyle
 import com.example.app_armario.data.RegionesChile
 import com.example.app_armario.Repositories.UsuarioRepository
 import com.example.app_armario.Models.Usuario
 import com.example.app_armario.Models.RolesPredefinidos
 import com.example.app_armario.dataStore
-
-
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,7 +56,7 @@ fun Registro(navController: NavHostController) {
 
     val comunasDeRegion = remember(region) { RegionesChile.comunasDe(region) }
 
-    // ===== Validaciones (como Login) =====
+    // ===== Validaciones =====
     val emailRegex = Regex("^[^\\s@]+@(duoc\\.cl|profesor\\.duoc\\.cl|gmail\\.com)\$", RegexOption.IGNORE_CASE)
     val correoValido = remember(correo) { correo.isNotEmpty() && emailRegex.matches(correo.trim()) }
 
@@ -125,9 +125,11 @@ fun Registro(navController: NavHostController) {
             Text("Crea tu cuenta en Armario de Sombras", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(20.dp))
 
+            // ===== Campos =====
             OutlinedTextField(
                 value = nombre, onValueChange = { nombre = it },
                 label = { Text("Nombre completo", color = Color.White) },
+                textStyle = LocalTextStyle.current.copy(color = Color.White), // 👈 texto blanco
                 singleLine = true,
                 isError = !nombreValido && nombre.isNotEmpty(),
                 supportingText = {
@@ -142,6 +144,7 @@ fun Registro(navController: NavHostController) {
             OutlinedTextField(
                 value = correo, onValueChange = { correo = it },
                 label = { Text("Correo electrónico", color = Color.White) },
+                textStyle = LocalTextStyle.current.copy(color = Color.White),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 isError = errorCorreo.isNotEmpty(),
@@ -168,6 +171,7 @@ fun Registro(navController: NavHostController) {
             OutlinedTextField(
                 value = contrasena, onValueChange = { contrasena = it },
                 label = { Text("Contraseña", color = Color.White) },
+                textStyle = LocalTextStyle.current.copy(color = Color.White),
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -198,6 +202,7 @@ fun Registro(navController: NavHostController) {
                     value = region,
                     onValueChange = {},
                     readOnly = true,
+                    textStyle = LocalTextStyle.current.copy(color = Color.White),
                     isError = !regionValida && region.isNotEmpty(),
                     label = { Text("Región", color = Color.White) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandRegion) },
@@ -210,7 +215,7 @@ fun Registro(navController: NavHostController) {
                             text = { Text(r) },
                             onClick = {
                                 region = r
-                                comuna = "" // reset comuna al cambiar región
+                                comuna = ""
                                 expandRegion = false
                             }
                         )
@@ -222,7 +227,7 @@ fun Registro(navController: NavHostController) {
             }
             Spacer(Modifier.height(10.dp))
 
-            // ===== Comuna (depende de región) =====
+            // ===== Comuna =====
             ExposedDropdownMenuBox(
                 expanded = expandComuna,
                 onExpandedChange = { if (region.isNotBlank()) expandComuna = it }
@@ -232,6 +237,7 @@ fun Registro(navController: NavHostController) {
                     onValueChange = {},
                     readOnly = true,
                     enabled = region.isNotBlank(),
+                    textStyle = LocalTextStyle.current.copy(color = Color.White),
                     isError = region.isNotBlank() && !comunaValida && comuna.isNotEmpty(),
                     label = {
                         Text(
@@ -257,6 +263,7 @@ fun Registro(navController: NavHostController) {
             OutlinedTextField(
                 value = direccion, onValueChange = { direccion = it },
                 label = { Text("Dirección", color = Color.White) },
+                textStyle = LocalTextStyle.current.copy(color = Color.White),
                 singleLine = true,
                 isError = !direccionValida && direccion.isNotEmpty(),
                 supportingText = {
@@ -278,14 +285,12 @@ fun Registro(navController: NavHostController) {
                         }
 
                         try {
-                            // Verifica duplicado
                             val existente = repoUsuarios.buscarPorEmail(correo.trim())
                             if (existente != null) {
                                 mensaje = "❌ El correo ya está registrado"
                                 return@launch
                             }
 
-                            // Guarda en UsuarioRepository (rol cliente)
                             repoUsuarios.agregarUsuario(
                                 Usuario(
                                     nombre = nombre.trim(),
@@ -296,21 +301,11 @@ fun Registro(navController: NavHostController) {
                                     region = region,
                                     comuna = comuna,
                                     direccion = direccion
-
                                 )
                             )
 
-                            // Guarda extras en DataStore (IO)
                             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                guardarUsuario(
-                                    context = context,
-                                    nombre = nombre,
-                                    correo = correo,
-                                    contrasena = contrasena,
-                                    region = region,
-                                    comuna = comuna,
-                                    direccion = direccion
-                                )
+                                guardarUsuario(context, nombre, correo, contrasena, region, comuna, direccion)
                             }
 
                             mensaje = "✅ Registro guardado correctamente"
@@ -320,7 +315,6 @@ fun Registro(navController: NavHostController) {
                                 launchSingleTop = true
                             }
                         } catch (e: Exception) {
-                            // Evita el crash y muestra el motivo
                             e.printStackTrace()
                             mensaje = "❌ Error al registrar: ${e.message ?: "desconocido"}"
                         }
@@ -336,7 +330,6 @@ fun Registro(navController: NavHostController) {
                 Text("Registrar", color = Color.White, fontSize = 16.sp)
             }
 
-
             Spacer(Modifier.height(12.dp))
             if (mensaje.isNotEmpty()) {
                 Text(
@@ -351,12 +344,12 @@ fun Registro(navController: NavHostController) {
 
 @Composable
 private fun tfColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = Color.White,
-    unfocusedTextColor = Color.White,
     focusedBorderColor = Color(0xFFB32DD4),
-    unfocusedBorderColor = Color(0xFF9C27B0)
+    unfocusedBorderColor = Color(0xFF9C27B0),
+    cursorColor = Color(0xFFB32DD4),
+    focusedLabelColor = Color(0xFFB32DD4),
+    unfocusedLabelColor = Color.LightGray
 )
-
 
 suspend fun guardarUsuario(
     context: Context,

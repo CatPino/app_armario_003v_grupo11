@@ -1,5 +1,9 @@
 package com.example.app_armario
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,10 +17,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -34,14 +38,12 @@ fun Login(navController: NavHostController) {
     val repo = remember { UsuarioRepository(context) }
     val scope = rememberCoroutineScope()
 
-    // ========= Comprobamos si hay sesión activa =========
     var usuarioSesion by remember { mutableStateOf<com.example.app_armario.Models.Usuario?>(null) }
     LaunchedEffect(Unit) {
-        val emailSesion = obtenerEmailSesion(context)   // <-- helper nuevo
+        val emailSesion = obtenerEmailSesion(context)
         usuarioSesion = emailSesion?.let { repo.buscarPorEmail(it) }
     }
 
-    // Si hay usuario en sesión => vista de cuenta
     usuarioSesion?.let { user ->
         CuentaView(
             navController = navController,
@@ -60,8 +62,6 @@ fun Login(navController: NavHostController) {
         return
     }
 
-    // ========= Si NO hay sesión: formulario de login =========
-
     var correo by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
     var mensaje by remember { mutableStateOf("") }
@@ -70,12 +70,12 @@ fun Login(navController: NavHostController) {
     val correoValido = remember(correo) { correo.isNotEmpty() && emailRegex.matches(correo.trim()) }
 
     fun mensajeErrorCorreo(): String {
-        val correoTrim = correo.trim()
-        if (correoTrim.isEmpty()) return ""
-        if (!correoTrim.contains("@")) return "El correo debe incluir '@'."
-        if (!correoTrim.contains(".")) return "Ingresa un correo válido (@duoc.cl, @profesor.duoc.cl o @gmail.com)."
-        if (correoTrim.length > 100) return "El correo no puede tener más de 100 caracteres."
-        if (!emailRegex.matches(correoTrim))
+        val c = correo.trim()
+        if (c.isEmpty()) return ""
+        if (!c.contains("@")) return "El correo debe incluir '@'."
+        if (!c.contains(".")) return "Ingresa un correo válido (@duoc.cl, @profesor.duoc.cl o @gmail.com)."
+        if (c.length > 100) return "El correo no puede tener más de 100 caracteres."
+        if (!emailRegex.matches(c))
             return "Ingresa un correo válido (@duoc.cl, @profesor.duoc.cl o @gmail.com)."
         return ""
     }
@@ -133,10 +133,12 @@ fun Login(navController: NavHostController) {
             Text("Accede a tu cuenta", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(20.dp))
 
+            // ======== Campo correo ========
             OutlinedTextField(
                 value = correo,
                 onValueChange = { correo = it },
                 label = { Text("Correo electrónico", color = Color.White) },
+                textStyle = TextStyle(color = Color.White), // 👈 fuerza texto blanco
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 isError = errorCorreo.isNotEmpty(),
@@ -148,17 +150,19 @@ fun Login(navController: NavHostController) {
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
                     focusedBorderColor = when {
                         correoValido -> Color(0xFF4CAF50)
                         errorCorreo.isNotEmpty() -> Color.Red
                         else -> Color(0xFFB32DD4)
                     },
-                    unfocusedBorderColor = Color(0xFF9C27B0)
+                    unfocusedBorderColor = Color(0xFF9C27B0),
+                    cursorColor = Color(0xFFB32DD4),
+                    focusedLabelColor = Color(0xFFB32DD4),
+                    unfocusedLabelColor = Color.LightGray
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
+
             if (correo.isNotEmpty()) {
                 Text(
                     if (correoValido) "Correo válido ✅" else errorCorreo,
@@ -170,10 +174,12 @@ fun Login(navController: NavHostController) {
 
             Spacer(Modifier.height(10.dp))
 
+            // ======== Campo contraseña ========
             OutlinedTextField(
                 value = contrasena,
                 onValueChange = { contrasena = it },
                 label = { Text("Contraseña", color = Color.White) },
+                textStyle = TextStyle(color = Color.White), // 👈 texto blanco visible
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -186,17 +192,19 @@ fun Login(navController: NavHostController) {
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
                     focusedBorderColor = when {
                         contrasenaValida -> Color(0xFF4CAF50)
                         errorPass.isNotEmpty() -> Color.Red
                         else -> Color(0xFFB32DD4)
                     },
-                    unfocusedBorderColor = Color(0xFF9C27B0)
+                    unfocusedBorderColor = Color(0xFF9C27B0),
+                    cursorColor = Color(0xFFB32DD4),
+                    focusedLabelColor = Color(0xFFB32DD4),
+                    unfocusedLabelColor = Color.LightGray
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
+
             if (contrasena.isNotEmpty()) {
                 Text(
                     if (contrasenaValida) "Contraseña válida ✅" else errorPass,
@@ -215,14 +223,9 @@ fun Login(navController: NavHostController) {
                             mensaje = "⚠️ Corrige los errores antes de continuar"
                             return@launch
                         }
-
                         val usuario = repo.validarLogin(correo, contrasena)
                         if (usuario != null) {
-                            guardarSesion(
-                                context = context,
-                                email = usuario.email,
-                                rol = usuario.rol.nombre
-                            )
+                            guardarSesion(context, usuario.email, usuario.rol.nombre)
                             mensaje = "✅ Inicio de sesión correcto"
                             delay(600)
                             navController.navigate("home") {
@@ -253,9 +256,6 @@ fun Login(navController: NavHostController) {
             TextButton(onClick = { navController.navigate("registro") }) {
                 Text("¿No tienes cuenta? Regístrate aquí", color = Color(0xFFB32DD4))
             }
-            TextButton(onClick = { navController.navigate("home") }) {
-                Text("⬅ Volver al inicio", color = Color.Gray, fontSize = 13.sp)
-            }
         }
     }
 }
@@ -267,70 +267,64 @@ private fun CuentaView(
     usuario: com.example.app_armario.Models.Usuario,
     onCerrarSesion: () -> Unit
 ) {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
+
     Scaffold(
         containerColor = Color.Black,
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "Mi cuenta",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black
-                )
+                title = { Text("Mi cuenta", color = Color.White, fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
             )
-
         }
     ) { inner ->
-        Column(
-            modifier = Modifier
-                .padding(inner)
-                .fillMaxSize()
-                .background(Color.Black)
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(animationSpec = tween(1000)) + slideInVertically(initialOffsetY = { it / 3 }, animationSpec = tween(800))
         ) {
-            AsyncImage(
-                model = "file:///android_asset/img/user.png",
-                contentDescription = "Avatar",
-                modifier = Modifier.size(96.dp)
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(usuario.nombre, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(usuario.email, color = Color.LightGray)
-            Text("Rol: ${usuario.rol.nombre.uppercase()}", color = Color(0xFFB32DD4), fontWeight = FontWeight.SemiBold)
+            Column(
+                modifier = Modifier
+                    .padding(inner)
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                AsyncImage(
+                    model = "file:///android_asset/img/user.png",
+                    contentDescription = "Avatar",
+                    modifier = Modifier.size(96.dp)
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(usuario.nombre, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(usuario.email, color = Color.LightGray)
+                Text("Rol: ${usuario.rol.nombre.uppercase()}", color = Color(0xFFB32DD4), fontWeight = FontWeight.SemiBold)
 
-            Spacer(Modifier.height(16.dp))
-            // Solo si existen esos campos (pueden ser nulos según tu modelo)
-            usuario.region?.let { Text("Región: $it", color = Color.White) }
-            usuario.comuna?.let { Text("Comuna: $it", color = Color.White) }
-            usuario.direccion?.let { Text("Dirección: $it", color = Color.White) }
+                Spacer(Modifier.height(16.dp))
+                usuario.region?.let { Text("Región: $it", color = Color.White) }
+                usuario.comuna?.let { Text("Comuna: $it", color = Color.White) }
+                usuario.direccion?.let { Text("Dirección: $it", color = Color.White) }
 
-            Spacer(Modifier.height(24.dp))
-            Button(
-                onClick = { navController.navigate("home") { popUpTo("home") { inclusive = true }; launchSingleTop = true } },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("Ir al Home", color = Color.White) }
+                Spacer(Modifier.height(24.dp))
+                Button(
+                    onClick = {
+                        navController.navigate("home") {
+                            popUpTo("home") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Ir al Home", color = Color.White) }
 
-            Spacer(Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = onCerrarSesion,
-                border = ButtonDefaults.outlinedButtonBorder(true),
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("Cerrar sesión", color = Color.Red) }
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onCerrarSesion,
+                    border = ButtonDefaults.outlinedButtonBorder(true),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Cerrar sesión", color = Color.Red) }
+            }
         }
     }
 }

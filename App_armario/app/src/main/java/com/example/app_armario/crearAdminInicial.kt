@@ -7,15 +7,14 @@ import com.example.app_armario.Repositories.UsuarioRepository
 
 fun crearAdminInicial(context: Context) {
     val repo = UsuarioRepository(context)
-    val adminExistente = repo.buscarPorEmail("admin@gmail.com")
 
-    if (adminExistente == null) {
-        val admin = Usuario(
-            nombre = "Administrador",
-            email = "admin@gmail.com",
-            password = "Admin123#",
-            rol = RolesPredefinidos.ADMIN
-        )
-        repo.agregarUsuario(admin)
-    }
+    repo.eliminarUsuario(repo.buscarPorEmail("admin@gmail.com")?.id ?: -1)
+
+    val admin = Usuario(
+        nombre = "Administrador",
+        email = "admin@gmail.com",
+        password = "Admin123#",
+        rol = RolesPredefinidos.ADMIN
+    )
+    repo.agregarUsuario(admin)
 }
