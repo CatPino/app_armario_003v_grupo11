@@ -2,7 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/app_armario_003v_grupo11.iml" filepath="$PROJECT_DIR$/.idea/app_armario_003v_grupo11.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/App_armario.iml" filepath="$PROJECT_DIR$/.idea/App_armario.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/App_armario.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/App_armario.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/App_armario.app.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/App_armario.app.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/App_armario.app.main.iml" filepath="$PROJECT_DIR$/.idea/modules/app/App_armario.app.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/App_armario.app.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/App_armario.app.unitTest.iml" />
     </modules>
   </component>
 </project>
