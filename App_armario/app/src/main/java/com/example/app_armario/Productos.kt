@@ -1,5 +1,7 @@
 package com.example.app_armario
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,13 +14,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +33,7 @@ import com.example.app_armario.Models.Categoria
 import com.example.app_armario.Models.Producto
 import com.example.app_armario.Repositories.CarritoRepository
 import com.example.app_armario.Repositories.ProductoRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,11 +46,15 @@ fun Productos(navController: NavHostController) {
     val cartCount by carritoRepo.contador.collectAsState()
     val scope = rememberCoroutineScope()
 
-    // Cargar desde DataStore
+    // === Cargar productos desde DataStore ===
     var productos by remember { mutableStateOf<List<Producto>>(emptyList()) }
+    var cargando by remember { mutableStateOf(true) }
+
     LaunchedEffect(Unit) {
         seedProductosSiVacio(context)
+        delay(600)
         productos = repo.getProductos()
+        cargando = false
     }
 
     var categoriaSeleccionada by remember { mutableStateOf<Categoria?>(null) }
@@ -86,9 +93,6 @@ fun Productos(navController: NavHostController) {
                             modifier = Modifier.size(26.dp).padding(2.dp)
                         )
                     }
-                    IconButton(onClick = { navController.navigate("registro") }) {
-                        Icon(Icons.Default.FavoriteBorder, contentDescription = "Registro", tint = Color.White)
-                    }
                     // 🛒 Badge dinámico
                     BadgedBox(
                         badge = {
@@ -108,62 +112,85 @@ fun Productos(navController: NavHostController) {
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .background(Color.Black)
-        ) {
-            // ===== FILTRO DE CATEGORÍAS =====
-            Row(
-                modifier = Modifier
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
+        if (cargando) {
+            LoadingAnimacionProductos()
+        } else {
+            AnimatedVisibility(
+                visible = !cargando,
+                enter = fadeIn(tween(800)) + slideInVertically(initialOffsetY = { it / 4 }),
+                exit = fadeOut(tween(300))
             ) {
-                CategoriaChip(
-                    texto = "Todas",
-                    seleccionado = categoriaSeleccionada == null,
-                    onClick = { categoriaSeleccionada = null }
-                )
-                Categoria.TODAS.forEach { cat ->
-                    CategoriaChip(
-                        texto = cat.nombre,
-                        seleccionado = categoriaSeleccionada == cat,
-                        onClick = { categoriaSeleccionada = cat }
-                    )
-                }
-            }
-
-            Divider(color = Color(0xFFB32DD4))
-            CategoriaDescripcion(categoriaSeleccionada)
-            Spacer(Modifier.height(10.dp))
-
-            // ===== LISTA DE PRODUCTOS =====
-            if (productosFiltrados.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Sin productos para mostrar.", color = Color.Gray)
-                }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 160.dp),
+                Column(
                     modifier = Modifier
-                        .padding(8.dp)
+                        .padding(innerPadding)
                         .fillMaxSize()
+                        .background(Color.Black)
                 ) {
-                    items(productosFiltrados, key = { it.id }) { p ->
-                        ProductoCard(
-                            p = p,
-                            onClick = { productoSeleccionado = p },
-                            onAdd = {
-                                carritoRepo.agregar(
-                                    idProducto = p.id,
-                                    nombre = p.nombre,
-                                    precio = p.precio,
-                                    imagenUrl = p.imagenUrl
-                                )
-                            }
+                    // ===== FILTRO DE CATEGORÍAS =====
+                    Row(
+                        modifier = Modifier
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CategoriaChip(
+                            texto = "Todas",
+                            seleccionado = categoriaSeleccionada == null,
+                            onClick = { categoriaSeleccionada = null }
                         )
+                        Categoria.TODAS.forEach { cat ->
+                            CategoriaChip(
+                                texto = cat.nombre,
+                                seleccionado = categoriaSeleccionada == cat,
+                                onClick = { categoriaSeleccionada = cat }
+                            )
+                        }
+                    }
+
+                    AnimatedContent(
+                        targetState = categoriaSeleccionada,
+                        transitionSpec = {
+                            fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+                        },
+                        label = ""
+                    ) { categoria ->
+                        Divider(color = Color(0xFFB32DD4))
+                        CategoriaDescripcion(categoria)
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+
+                    // ===== LISTA DE PRODUCTOS =====
+                    if (productosFiltrados.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Sin productos para mostrar.", color = Color.Gray)
+                        }
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 160.dp),
+                            modifier = Modifier.padding(8.dp).fillMaxSize()
+                        ) {
+                            items(productosFiltrados, key = { it.id }) { p ->
+                                AnimatedVisibility(
+                                    visible = true,
+                                    enter = fadeIn(tween(700)) + slideInVertically(initialOffsetY = { it / 3 }),
+                                    exit = fadeOut(tween(300))
+                                ) {
+                                    ProductoCardAnimado(
+                                        p = p,
+                                        onClick = { productoSeleccionado = p },
+                                        onAdd = {
+                                            carritoRepo.agregar(
+                                                idProducto = p.id,
+                                                nombre = p.nombre,
+                                                precio = p.precio,
+                                                imagenUrl = p.imagenUrl
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -171,10 +198,11 @@ fun Productos(navController: NavHostController) {
     }
 }
 
-/* =============== COMPONENTES AUXILIARES =============== */
+/* =================== CHIP =================== */
 
 @Composable
 fun CategoriaChip(texto: String, seleccionado: Boolean, onClick: () -> Unit) {
+    val scale by animateFloatAsState(if (seleccionado) 1.1f else 1f)
     AssistChip(
         onClick = onClick,
         label = {
@@ -192,54 +220,130 @@ fun CategoriaChip(texto: String, seleccionado: Boolean, onClick: () -> Unit) {
             width = 1.dp,
             color = if (seleccionado) Color(0xFFB32DD4) else Color.Gray
         ),
-        modifier = Modifier.padding(horizontal = 4.dp)
+        modifier = Modifier
+            .padding(horizontal = 4.dp)
+            .graphicsLayer(scaleX = scale, scaleY = scale)
     )
 }
 
+/* =================== CARD PRODUCTO ANIMADO =================== */
+
+/* =================== CARD PRODUCTO ANIMADO =================== */
 @Composable
-fun ProductoCard(
-    p: Producto,
-    onClick: () -> Unit,
-    onAdd: () -> Unit
-) {
+fun ProductoCardAnimado(p: Producto, onClick: () -> Unit, onAdd: () -> Unit) {
+    var pressed by remember { mutableStateOf(false) }
+
+    // Animación de escala sutil al presionar
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.97f else 1f,
+        animationSpec = tween(300, easing = LinearOutSlowInEasing)
+    )
+
     Card(
         modifier = Modifier
             .padding(8.dp)
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .graphicsLayer(scaleX = scale, scaleY = scale)
+            .clickable {
+                pressed = true
+                onClick()
+            },
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1C1C1C))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1C1C1C)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp)
         ) {
+            // 🔹 Imagen con tamaño fijo
             AsyncImage(
                 model = p.imagenUrl ?: "file:///android_asset/img/default.png",
                 contentDescription = p.nombre,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp),
+                    .height(160.dp), // mantiene proporción de las imágenes
                 contentScale = ContentScale.Crop
             )
-            Spacer(Modifier.height(8.dp))
-            Text(p.nombre, color = Color.White, fontWeight = FontWeight.SemiBold)
-            Text("$${p.precio}", color = Color(0xFFB32DD4))
-            Text(p.categoria.nombre, color = Color.Gray, fontSize = 12.sp)
 
-            Button(
-                onClick = onAdd,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB32DD4)),
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .fillMaxWidth()
-                    .height(40.dp)
-            ) {
-                Text("Agregar", color = Color.White)
-            }
+            Spacer(Modifier.height(8.dp))
+
+            // 🔹 Nombre del producto, adaptable sin cortar
+            Text(
+                text = p.nombre,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+                softWrap = true, // permite salto de línea
+                maxLines = 3     // pero sin cortar bruscamente
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            // 🔹 Precio
+            Text(
+                text = "$${p.precio}",
+                color = Color(0xFFB32DD4),
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
+
+            // 🔹 Categoría
+            Text(
+                text = p.categoria.nombre,
+                color = Color.Gray,
+                fontSize = 12.sp
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            // 🔹 Botón inferior
+            AnimatedAddButton(onAdd)
+        }
+    }
+
+    // 🔁 Vuelve al estado normal después de presionar
+    LaunchedEffect(pressed) {
+        if (pressed) {
+            delay(120)
+            pressed = false
         }
     }
 }
+
+/* =================== BOTÓN "AGREGAR" =================== */
+@Composable
+private fun AnimatedAddButton(onAdd: () -> Unit) {
+    var pressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (pressed) 0.9f else 1f)
+
+    Button(
+        onClick = {
+            pressed = true
+            onAdd()
+        },
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB32DD4)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(42.dp)
+            .graphicsLayer(scaleX = scale, scaleY = scale)
+    ) {
+        Text("Agregar", color = Color.White, fontWeight = FontWeight.Medium)
+    }
+
+    LaunchedEffect(pressed) {
+        if (pressed) {
+            delay(150)
+            pressed = false
+        }
+    }
+}
+
+/* =================== DESCRIPCIÓN DE CATEGORÍA =================== */
 
 @Composable
 fun CategoriaDescripcion(categoria: Categoria?) {
@@ -247,46 +351,74 @@ fun CategoriaDescripcion(categoria: Categoria?) {
         null -> "Conoce todos nuestros productos" to
                 "Dale a tu outfit un toque gótico auténtico. Cada prenda está diseñada para expresar tu personalidad con fuerza."
         Categoria.POLERAS -> "Poleras" to
-                "Nuestras poleras son el reflejo de un estilo auténtico. Simples, pero con personalidad marcada, añaden a tu look un aire oscuro y moderno."
+                "Nuestras poleras son el reflejo de un estilo auténtico y moderno."
         Categoria.FALDAS -> "Faldas" to
-                "Las faldas están pensadas para realzar tu esencia con un aire alternativo. Su estilo sutilmente gótico permite expresar tu personalidad con fuerza."
+                "Las faldas realzan tu esencia con un aire alternativo."
         Categoria.CALZAS -> "Calzas" to
-                "Las calzas combinan comodidad con un aire rebelde y moderno. Ideales para un look urbano con matices oscuros, acompañan tu día a día sin perder estilo."
+                "Comodidad y rebeldía en un solo estilo urbano y oscuro."
         Categoria.ACCESORIOS -> "Accesorios" to
-                "Cada accesorio es un detalle que transforma tu estilo. Diseñados para resaltar tu individualidad, aportan un toque único y sofisticado a tu look."
+                "Detalles que transforman tu look y resaltan tu individualidad."
         else -> "" to ""
     }
 
-    Card(
-        modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF121212)),
-        border = BorderStroke(1.dp, Color(0xFFB96CFF).copy(alpha = 0.6f)),
-        shape = MaterialTheme.shapes.medium,
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    AnimatedVisibility(
+        visible = true,
+        enter = fadeIn(tween(400)) + expandVertically(),
+        exit = fadeOut(tween(300))
+    ) {
+        Card(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp).fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF121212)),
+            border = BorderStroke(1.dp, Color(0xFFB96CFF).copy(alpha = 0.6f)),
+            shape = MaterialTheme.shapes.medium,
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = titulo,
+                    color = Color(0xFFDFB9FF),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = descripcion,
+                    color = Color.LightGray,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+/* =================== LOADING =================== */
+
+@Composable
+fun LoadingAnimacionProductos() {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(200)
+        visible = true
+    }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(1000))
     ) {
         Column(
-            modifier = Modifier
-                .padding(20.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.fillMaxSize().background(Color.Black),
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = titulo,
-                color = Color(0xFFDFB9FF),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = descripcion,
-                color = Color.LightGray,
-                fontSize = 15.sp,
-                lineHeight = 22.sp,
-                textAlign = TextAlign.Center
-            )
+            CircularProgressIndicator(color = Color(0xFFB32DD4))
+            Spacer(Modifier.height(20.dp))
+            Text("Cargando productos...", color = Color.White)
         }
     }
 }
