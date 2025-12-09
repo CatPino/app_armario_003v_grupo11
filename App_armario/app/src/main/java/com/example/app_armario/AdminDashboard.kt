@@ -22,13 +22,15 @@ import androidx.navigation.NavHostController
 import com.example.app_armario.Models.*
 import com.example.app_armario.Repositories.ProductoRepository
 import com.example.app_armario.Repositories.UsuarioRepository
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboard(navController: NavHostController) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val productoRepo = remember { ProductoRepository(context) }
-    val usuarioRepo = remember { UsuarioRepository(context) }
+    val usuarioRepo = remember { UsuarioRepository() }
 
     // Datos en memoria
     var productos by remember { mutableStateOf(listOf<Producto>()) }
@@ -40,9 +42,17 @@ fun AdminDashboard(navController: NavHostController) {
         usuarios  = usuarioRepo.getUsuarios()
     }
 
-    // Helpers de refresco
-    fun refreshProductos() { productos = productoRepo.getProductos() }
-    fun refreshUsuarios()  { usuarios  = usuarioRepo.getUsuarios() }
+    // Helpers de refresco (ahora lanzan corrutinas)
+    fun refreshProductos() { 
+        scope.launch { 
+            productos = productoRepo.getProductos() 
+        } 
+    }
+    fun refreshUsuarios() { 
+        scope.launch { 
+            usuarios = usuarioRepo.getUsuarios() 
+        } 
+    }
 
     // Estado de UI
     var tabIndex by remember { mutableStateOf(0) } // 0 = Productos, 1 = Usuarios
@@ -152,15 +162,17 @@ fun AdminDashboard(navController: NavHostController) {
             initial = editingProducto,
             onDismiss = { showProductDialog = false },
             onSave = { form ->
-                if (editingProducto == null) {
-                    // Crear
-                    productoRepo.agregarProducto(form)
-                } else {
-                    // Editar (mantener id)
-                    productoRepo.editarProducto(form.copy(id = editingProducto!!.id))
+                scope.launch {
+                    if (editingProducto == null) {
+                        // Crear
+                        productoRepo.agregarProducto(form)
+                    } else {
+                        // Editar (mantener id)
+                        productoRepo.editarProducto(form.copy(id = editingProducto!!.id))
+                    }
+                    showProductDialog = false
+                    refreshProductos()
                 }
-                showProductDialog = false
-                refreshProductos()
             }
         )
     }
@@ -171,13 +183,15 @@ fun AdminDashboard(navController: NavHostController) {
             initial = editingUsuario,
             onDismiss = { showUserDialog = false },
             onSave = { form ->
-                if (editingUsuario == null) {
-                    usuarioRepo.agregarUsuario(form)
-                } else {
-                    usuarioRepo.editarUsuario(form.copy(id = editingUsuario!!.id))
+                scope.launch {
+                    if (editingUsuario == null) {
+                        usuarioRepo.agregarUsuario(form)
+                    } else {
+                        usuarioRepo.editarUsuario(form.copy(id = editingUsuario!!.id))
+                    }
+                    showUserDialog = false
+                    refreshUsuarios()
                 }
-                showUserDialog = false
-                refreshUsuarios()
             }
         )
     }
@@ -189,9 +203,11 @@ fun AdminDashboard(navController: NavHostController) {
             message = "¿Seguro que quieres eliminar \"${p.nombre}\"?",
             onDismiss = { confirmDeleteProduct = null },
             onConfirm = {
-                productoRepo.eliminarProducto(p.id)
-                confirmDeleteProduct = null
-                refreshProductos()
+                scope.launch {
+                    productoRepo.eliminarProducto(p.id)
+                    confirmDeleteProduct = null
+                    refreshProductos()
+                }
             }
         )
     }
@@ -203,9 +219,11 @@ fun AdminDashboard(navController: NavHostController) {
             message = "¿Seguro que quieres eliminar a \"${u.nombre}\"?",
             onDismiss = { confirmDeleteUser = null },
             onConfirm = {
-                usuarioRepo.eliminarUsuario(u.id)
-                confirmDeleteUser = null
-                refreshUsuarios()
+                scope.launch {
+                    usuarioRepo.eliminarUsuario(u.id)
+                    confirmDeleteUser = null
+                    refreshUsuarios()
+                }
             }
         )
     }
@@ -309,7 +327,7 @@ private fun ProductFormDialog(
                         if (nombre.isNotBlank() && precio > 0 && stock >= 0) {
                             onSave(
                                 Producto(
-                                    id = initial?.id ?: 0L,
+                                    id = initial?.id ?: "", // En creación se generará un ID nuevo, en edición se usa el existente
                                     nombre = nombre.trim(),
                                     descripcion = descripcion.trim(),
                                     precio = precio,
@@ -425,7 +443,7 @@ private fun UserFormDialog(
                         if (nombre.isNotBlank() && email.isNotBlank() && password.isNotBlank()) {
                             onSave(
                                 Usuario(
-                                    id = initial?.id ?: 0L,
+                                    id = initial?.id ?: "", // En creación se generará ID, en edición se mantiene
                                     nombre = nombre.trim(),
                                     email = email.trim(),
                                     password = password,

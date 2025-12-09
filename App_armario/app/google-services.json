@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "876136279428",
+    "project_id": "apparmario",
+    "storage_bucket": "apparmario.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:876136279428:android:78fed879b70c70c524c1d1",
+        "android_client_info": {
+          "package_name": "com.example.app_armario"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzErbMIrn234EvQdV1Dzi7luohF2kWFJs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

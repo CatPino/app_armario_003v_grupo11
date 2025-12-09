@@ -2,10 +2,14 @@ package com.example.app_armario.data
 
 import com.example.app_armario.Models.Categoria
 import com.example.app_armario.Models.Producto
+import java.util.UUID
+
+// Helper para generar IDs aleatorios tipo String
+fun randomId() = UUID.randomUUID().toString()
 
 val productosMock = listOf(
     Producto(
-        id = 1,
+        id = randomId(),
         nombre = "Polera Iron Maiden",
         descripcion = "Polera con diseño de Iron Maiden.",
         precio = 8000,
@@ -18,7 +22,7 @@ val productosMock = listOf(
         material = "100% algodón"
     ),
     Producto(
-        id = 2,
+        id = randomId(),
         nombre = "Polera Slipknot",
         descripcion = "Polera de Slipknot con detalles de metal.",
         precio = 15990,
@@ -31,7 +35,7 @@ val productosMock = listOf(
         material = "Poliéster"
     ),
     Producto(
-        id = 3,
+        id = randomId(),
         nombre = "Polera The Misfits",
         descripcion = "Polera con diseño de The Misfits.",
         precio = 25990,
@@ -44,7 +48,7 @@ val productosMock = listOf(
         material = "100% algodón"
     ),
     Producto(
-        id = 4,
+        id = randomId(),
         nombre = "Polera Esqueleto",
         descripcion = "Polera halter con diseño de The Misfits.",
         precio = 10000,
@@ -57,7 +61,7 @@ val productosMock = listOf(
         material = "Poliéster"
     ),
     Producto(
-        id = 5,
+        id = randomId(),
         nombre = "Falda Murciélagos",
         descripcion = "Falda negra con estampado de murciélagos.",
         precio = 11000,
@@ -70,7 +74,7 @@ val productosMock = listOf(
         material = "Algodón"
     ),
     Producto(
-        id = 6,
+        id = randomId(),
         nombre = "Falda Amon Amarth",
         descripcion = "Falda negra con estampado de la banda Amon Amarth.",
         precio = 11000,
@@ -83,7 +87,7 @@ val productosMock = listOf(
         material = "100% algodón"
     ),
     Producto(
-        id = 7,
+        id = randomId(),
         nombre = "Falda Disturbed",
         descripcion = "Falda negra con estampado de la banda Disturbed.",
         precio = 9000,
@@ -96,7 +100,7 @@ val productosMock = listOf(
         material = "Poliéster"
     ),
     Producto(
-        id = 8,
+        id = randomId(),
         nombre = "Falda Baphomet",
         descripcion = "Falda negra con estampado de Baphomet.",
         precio = 12000,
@@ -109,7 +113,7 @@ val productosMock = listOf(
         material = "Algodón"
     ),
     Producto(
-        id = 9,
+        id = randomId(),
         nombre = "Calza Baphometh",
         descripcion = "Calza negra con estampado de la banda Baphometh.",
         precio = 10000,
@@ -122,7 +126,7 @@ val productosMock = listOf(
         material = "Poliéster"
     ),
     Producto(
-        id = 10,
+        id = randomId(),
         nombre = "Calza Cadenas",
         descripcion = "Calza negra con estampado de cadenas.",
         precio = 10000,
@@ -135,7 +139,7 @@ val productosMock = listOf(
         material = "Poliéster"
     ),
     Producto(
-        id = 11,
+        id = randomId(),
         nombre = "Calza Nargaroth",
         descripcion = "Calza con estampado de la banda Nargaroth.",
         precio = 10000,
@@ -148,7 +152,7 @@ val productosMock = listOf(
         material = "Algodón"
     ),
     Producto(
-        id = 12,
+        id = randomId(),
         nombre = "Calza Baphometh Latex",
         descripcion = "Calza negra de latex con estampado de Baphometh.",
         precio = 10000,
@@ -161,7 +165,7 @@ val productosMock = listOf(
         material = "Latex"
     ),
     Producto(
-        id = 13,
+        id = randomId(),
         nombre = "Chocker Cruz",
         descripcion = "Chocker de cruz con encaje.",
         precio = 5000,
@@ -174,7 +178,7 @@ val productosMock = listOf(
         material = "Cuero sintético"
     ),
     Producto(
-        id = 14,
+        id = randomId(),
         nombre = "Arnés Estrella",
         descripcion = "Arnés elasticado con cadenas.",
         precio = 10000,
@@ -187,7 +191,7 @@ val productosMock = listOf(
         material = "Elástico grueso"
     ),
     Producto(
-        id = 15,
+        id = randomId(),
         nombre = "Chocker Calavera",
         descripcion = "Chocker negro con calavera y cadenas.",
         precio = 5000,
@@ -200,7 +204,7 @@ val productosMock = listOf(
         material = "Cuero sintético"
     ),
     Producto(
-        id = 16,
+        id = randomId(),
         nombre = "Cinturón Baphomet",
         descripcion = "Cinturón negro con cadenas estilo Baphomet.",
         precio = 12000,

@@ -1,7 +1,9 @@
 package com.example.app_armario
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 
-// Esta es la extensión global para usar DataStore en toda la app
-val Context.dataStore by preferencesDataStore(name = "app_armario_local")
+// Declaración ÚNICA y PÚBLICA del DataStore para toda la app.
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_armario_local")
