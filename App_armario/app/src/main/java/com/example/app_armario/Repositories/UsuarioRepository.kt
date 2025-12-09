@@ -1,116 +1,63 @@
 package com.example.app_armario.Repositories
 
-import android.content.Context
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import com.example.app_armario.Models.Rol
 import com.example.app_armario.Models.RolesPredefinidos
 import com.example.app_armario.Models.Usuario
-import com.example.app_armario.dataStore
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ktx.toObject
+import kotlinx.coroutines.tasks.await
 
-class UsuarioRepository(private val context: Context) {
+class UsuarioRepository {
 
-    private val usuarioKey = stringPreferencesKey("usuarios")
+    private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
+    private val collection = db.collection("usuarios")
 
-    // Obtener todos los usuarios
-    fun getUsuarios(): List<Usuario> = runBlocking {
-        context.dataStore.data.map { prefs ->
-            prefs[usuarioKey]?.let { Json.decodeFromString<List<Usuario>>(it) } ?: emptyList()
-        }.first()
-    }
-
-    // Agregar usuario nuevo (sin duplicar email)
-    fun agregarUsuario(usuario: Usuario) = runBlocking {
-        val lista = getUsuarios().toMutableList()
-
-        val limpio = limpiarCampos(usuario)
-        validarSegunRol(limpio)
-
-        if (lista.none { it.email.equals(limpio.email, ignoreCase = true) }) {
-            val nuevoId = (lista.maxOfOrNull { it.id } ?: 0) + 1
-            lista.add(limpio.copy(id = nuevoId))
-            guardarLista(lista)
-        } else {
-            // Si quieres, lanza una excepción aquí
-            // throw IllegalArgumentException("El email ya está registrado")
+    suspend fun getUsuarios(): List<Usuario> {
+        return try {
+            val snapshot = collection.get().await()
+            snapshot.documents.mapNotNull { it.toObject<Usuario>() }
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 
-    // Editar usuario
-    fun editarUsuario(actualizado: Usuario) = runBlocking {
-        val lista = getUsuarios().toMutableList()
-        val index = lista.indexOfFirst { it.id == actualizado.id }
-        if (index != -1) {
-            val limpio = limpiarCampos(actualizado)
+    suspend fun agregarUsuario(usuario: Usuario): Result<Unit> {
+        return try {
+            // 1. Crear usuario en Firebase Authentication
+            val authResult = auth.createUserWithEmailAndPassword(usuario.email, usuario.password).await()
+            val firebaseUser = authResult.user
+                ?: return Result.failure(Exception("No se pudo crear el usuario en Firebase Auth."))
 
-            // Evitar email duplicado en otro usuario
-            val emailEnUsoPorOtro =
-                lista.any { it.id != limpio.id && it.email.equals(limpio.email, ignoreCase = true) }
-            if (emailEnUsoPorOtro) {
-                // throw IllegalArgumentException("Ese email ya está en uso por otro usuario")
-                return@runBlocking
-            }
-
-            validarSegunRol(limpio)
-            lista[index] = limpio
-            guardarLista(lista)
+            // 2. Guardar datos adicionales en Firestore usando el UID de Auth como ID del documento
+            val usuarioConId = usuario.copy(id = firebaseUser.uid)
+            collection.document(firebaseUser.uid).set(usuarioConId).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
-    // Eliminar usuario
-    fun eliminarUsuario(id: Long) = runBlocking {
-        val nuevaLista = getUsuarios().filterNot { it.id == id }
-        guardarLista(nuevaLista)
+    suspend fun editarUsuario(actualizado: Usuario) {
+        collection.document(actualizado.id).set(actualizado).await()
     }
 
-    // Buscar usuario por email
-    fun buscarPorEmail(email: String): Usuario? = runBlocking {
+    suspend fun eliminarUsuario(id: String) {
+        collection.document(id).delete().await()
+    }
+
+    suspend fun buscarPorEmail(email: String): Usuario? {
         val e = email.trim().lowercase()
-        getUsuarios().find { it.email.equals(e, ignoreCase = true) }
+        val snapshot = collection.whereEqualTo("email", e).get().await()
+        return snapshot.documents.firstOrNull()?.toObject<Usuario>()
     }
 
-    // Validar login
-    fun validarLogin(email: String, password: String): Usuario? = runBlocking {
-        val e = email.trim().lowercase()
-        getUsuarios().find { it.email.equals(e, ignoreCase = true) && it.password == password }
-    }
-
-    // ================== Helpers internos ==================
-
-    // Normaliza strings (trim) y pone el email en minúsculas
-    private fun limpiarCampos(u: Usuario): Usuario {
-        return u.copy(
-            nombre = u.nombre.trim(),
-            email = u.email.trim().lowercase(),
-            password = u.password, // si quieres: u.password.trim()
-            telefono = u.telefono?.trim()?.ifBlank { null },
-            region = u.region?.trim()?.ifBlank { null },
-            comuna = u.comuna?.trim()?.ifBlank { null },
-            direccion = u.direccion?.trim()?.ifBlank { null }
-        )
-    }
-
-    // Si es CLIENTE, exige región/comuna/dirección
-    private fun validarSegunRol(u: Usuario) {
-        val esCliente = (u.rol.nombre.equals(RolesPredefinidos.CLIENTE.nombre, ignoreCase = true))
-        if (esCliente) {
-            require(!u.region.isNullOrBlank()) { "La región es obligatoria para clientes." }
-            require(!u.comuna.isNullOrBlank()) { "La comuna es obligatoria para clientes." }
-            require(!u.direccion.isNullOrBlank()) { "La dirección es obligatoria para clientes." }
-        }
-    }
-
-    // Persistencia
-    private fun guardarLista(lista: List<Usuario>) = runBlocking {
-        context.dataStore.edit { prefs ->
-            prefs[usuarioKey] = Json.encodeToString(lista)
+    suspend fun validarLogin(email: String, password: String): Usuario? {
+        return try {
+            auth.signInWithEmailAndPassword(email, password).await()
+            buscarPorEmail(email)
+        } catch (e: Exception) {
+            null
         }
     }
 }
-

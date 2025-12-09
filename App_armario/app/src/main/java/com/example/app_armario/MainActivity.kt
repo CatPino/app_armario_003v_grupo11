@@ -13,7 +13,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // 🔥 Correr dentro de corrutina del ciclo de vida
+        //  Crear admin y sembrar productos si no existen (en corrutina porque son suspend)
         lifecycleScope.launch {
             crearAdminInicial(this@MainActivity)
             seedProductosSiVacio(this@MainActivity)

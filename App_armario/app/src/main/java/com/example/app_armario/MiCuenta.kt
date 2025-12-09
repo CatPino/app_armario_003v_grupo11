@@ -23,15 +23,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.example.app_armario.Repositories.UsuarioRepository
-import kotlinx.coroutines.launch
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.util.*
@@ -41,9 +42,8 @@ import java.util.*
 fun MiCuenta(navController: NavHostController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val usuarioRepo = remember { UsuarioRepository(context) }
+    val usuarioRepo = remember { UsuarioRepository() }
 
-    // --- Estado: sesión + perfil ---
     var email by remember { mutableStateOf<String?>(null) }
     var rol by remember { mutableStateOf<String?>(null) }
     var nombre by remember { mutableStateOf<String?>(null) }
@@ -52,41 +52,40 @@ fun MiCuenta(navController: NavHostController) {
     var direccion by remember { mutableStateOf<String?>(null) }
     var avatarUri by remember { mutableStateOf<String?>(null) }
 
-    // Cargar datos de sesión y perfil
     LaunchedEffect(Unit) {
-        email = obtenerEmailUsuario(context)
-        rol = obtenerRolUsuario(context)
-        // Datos del UsuarioRepository (nombre, etc.)
+        email = obtenerEmailUsuarioLocal(context)
+        rol = obtenerRolUsuarioLocal(context)
+        avatarUri = leerPrefLocal(context, "avatar_uri")
+
         val user = email?.let { usuarioRepo.buscarPorEmail(it) }
-        nombre = user?.nombre ?: "Invitado"
-        // Extras guardados en DataStore por Registro
-        region = leerPref(context, "region")
-        comuna = leerPref(context, "comuna")
-        direccion = leerPref(context, "direccion")
-        avatarUri = leerPref(context, "avatar_uri")
+        if (user != null) {
+            nombre = user.nombre
+            region = user.region
+            comuna = user.comuna
+            direccion = user.direccion
+        } else {
+            nombre = "Invitado"
+        }
     }
 
-    // Launchers para seleccionar/tomar foto
-    val pickImageLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            uri?.let {
-                scope.launch {
-                    guardarPref(context, "avatar_uri", it.toString())
-                    avatarUri = it.toString()
-                }
+    val pickImageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        uri?.let {
+            scope.launch {
+                guardarPrefLocal(context, "avatar_uri", it.toString())
+                avatarUri = it.toString()
             }
         }
+    }
 
-    val takePictureLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp: Bitmap? ->
-            if (bmp != null) {
-                scope.launch {
-                    val localUri = guardarBitmapEnCache(context, bmp)
-                    guardarPref(context, "avatar_uri", localUri.toString())
-                    avatarUri = localUri.toString()
-                }
+    val takePictureLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp: Bitmap? ->
+        if (bmp != null) {
+            scope.launch {
+                val localUri = guardarBitmapEnCache(context, bmp)
+                guardarPrefLocal(context, "avatar_uri", localUri.toString())
+                avatarUri = localUri.toString()
             }
         }
+    }
 
     Scaffold(
         containerColor = Color.Black,
@@ -103,54 +102,25 @@ fun MiCuenta(navController: NavHostController) {
         }
     ) { inner ->
         Column(
-            modifier = Modifier
-                .padding(inner)
-                .fillMaxSize()
-                .background(Color.Black)
-                .padding(20.dp),
+            modifier = Modifier.padding(inner).fillMaxSize().background(Color.Black).padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Avatar
             Box(contentAlignment = Alignment.BottomEnd) {
                 if (!avatarUri.isNullOrBlank()) {
-                    AsyncImage(
-                        model = avatarUri,
-                        contentDescription = "Foto de perfil",
-                        modifier = Modifier
-                            .size(110.dp)
-                            .clip(CircleShape)
-                    )
+                    AsyncImage(model = avatarUri, contentDescription = "Foto de perfil", modifier = Modifier.size(110.dp).clip(CircleShape))
                 } else {
-                    // placeholder
-                    AsyncImage(
-                        model = "file:///android_asset/img/user.png",
-                        contentDescription = "Foto de perfil",
-                        modifier = Modifier
-                            .size(110.dp)
-                            .clip(CircleShape)
-                    )
+                    AsyncImage(model = "file:///android_asset/img/user.png", contentDescription = "Foto de perfil", modifier = Modifier.size(110.dp).clip(CircleShape))
                 }
             }
             Spacer(Modifier.height(12.dp))
 
-            // Botones de foto
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(
-                    onClick = {
-                        pickImageLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                ) {
+                OutlinedButton(onClick = { pickImageLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
                     Icon(Icons.Default.Image, contentDescription = null, tint = Color(0xFFB32DD4))
                     Spacer(Modifier.width(6.dp))
                     Text("Galería")
                 }
-                OutlinedButton(
-                    onClick = { takePictureLauncher.launch(null) },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                ) {
+                OutlinedButton(onClick = { takePictureLauncher.launch(null) }, colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
                     Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color(0xFFB32DD4))
                     Spacer(Modifier.width(6.dp))
                     Text("Cámara")
@@ -159,35 +129,27 @@ fun MiCuenta(navController: NavHostController) {
 
             Spacer(Modifier.height(24.dp))
 
-            // Datos de usuario (si hay sesión)
             if (email == null) {
                 Text("No has iniciado sesión.", color = Color.Gray)
                 Spacer(Modifier.height(12.dp))
-                Button(
-                    onClick = { navController.navigate("login") },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB32DD4))
-                ) { Text("Ir a iniciar sesión", color = Color.White) }
+                Button(onClick = { navController.navigate(Screen.Login.route) }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB32DD4))) {
+                    Text("Ir a iniciar sesión", color = Color.White)
+                }
             } else {
-                // Bloques de info
-                InfoRow(label = "Nombre", value = nombre ?: "-")
-                InfoRow(label = "Email", value = email ?: "-")
-                InfoRow(label = "Rol", value = rol?.uppercase() ?: "-")
-                Divider(color = Color.DarkGray, thickness = 1.dp, modifier = Modifier.padding(vertical = 10.dp))
-                InfoRow(label = "Región", value = region ?: "-")
-                InfoRow(label = "Comuna", value = comuna ?: "-")
-                InfoRow(label = "Dirección", value = direccion ?: "-")
+                InfoRow("Nombre", nombre ?: "-")
+                InfoRow("Email", email ?: "-")
+                InfoRow("Rol", rol?.uppercase() ?: "-")
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                InfoRow("Región", region ?: "-")
+                InfoRow("Comuna", comuna ?: "-")
+                InfoRow("Dirección", direccion ?: "-")
 
                 Spacer(Modifier.height(24.dp))
                 Button(
                     onClick = {
-                        // cerrar sesión y volver al Home
-                        val scopeLocal = scope
-                        scopeLocal.launch {
-                            cerrarSesion(context)
-                            navController.navigate("home") {
-                                popUpTo("home") { inclusive = true }
-                                launchSingleTop = true
-                            }
+                        scope.launch {
+                            cerrarSesionLocal(context)
+                            navController.navigate(Screen.Home.route) { popUpTo(Screen.Home.route) { inclusive = true }; launchSingleTop = true }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5F5F)),
@@ -202,31 +164,37 @@ fun MiCuenta(navController: NavHostController) {
 
 @Composable
 private fun InfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, color = Color.LightGray)
         Text(value, color = Color.White, fontWeight = FontWeight.SemiBold)
     }
     Spacer(Modifier.height(8.dp))
 }
 
-/* ==================== Helpers DataStore y archivos ==================== */
-
-private suspend fun obtenerEmailUsuario(context: Context): String? {
+private suspend fun obtenerEmailUsuarioLocal(context: Context): String? {
     val key = stringPreferencesKey("usuario_logueado")
     return context.dataStore.data.map { it[key] }.first()
 }
 
-private suspend fun leerPref(context: Context, keyName: String): String? {
+private suspend fun obtenerRolUsuarioLocal(context: Context): String? {
+    val key = stringPreferencesKey("rol_logueado")
+    return context.dataStore.data.map { it[key] }.first()
+}
+
+private suspend fun leerPrefLocal(context: Context, keyName: String): String? {
     val k = stringPreferencesKey(keyName)
     return context.dataStore.data.map { it[k] }.first()
 }
 
-private suspend fun guardarPref(context: Context, keyName: String, value: String) {
+private suspend fun guardarPrefLocal(context: Context, keyName: String, value: String) {
     val k = stringPreferencesKey(keyName)
     context.dataStore.edit { prefs -> prefs[k] = value }
+}
+
+private suspend fun cerrarSesionLocal(context: Context) {
+    context.dataStore.edit {
+        it.clear()
+    }
 }
 
 private fun guardarBitmapEnCache(context: Context, bmp: Bitmap): Uri {
@@ -235,4 +203,9 @@ private fun guardarBitmapEnCache(context: Context, bmp: Bitmap): Uri {
         bmp.compress(Bitmap.CompressFormat.JPEG, 92, out)
     }
     return Uri.fromFile(file)
+}
+
+@Composable
+fun HorizontalDivider(modifier: Modifier = Modifier, thickness: Dp = 1.dp, color: Color = Color.Gray) {
+    Box(modifier.fillMaxWidth().height(thickness).background(color))
 }

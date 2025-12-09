@@ -1,13 +1,10 @@
 package com.example.app_armario.Models
 
-import kotlinx.serialization.Serializable
-
-@Serializable
 data class Usuario(
-    val id: Long = 0,
-    val nombre: String,
-    val email: String,
-    val password: String,
+    val id: String = "",
+    val nombre: String = "",
+    val email: String = "",
+    val password: String = "", // Nota: En producción real, no guardar password en Firestore, solo en Auth.
     val telefono: String? = null,
     val rol: Rol = RolesPredefinidos.CLIENTE,
     val region: String? = null,

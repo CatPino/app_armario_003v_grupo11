@@ -1,10 +1,9 @@
 package com.example.app_armario.Models
-import kotlinx.serialization.Serializable
 
-@Serializable
+// No es necesario @Serializable si se usa el método .toObject() de Firebase
 data class Venta(
-    val id: String,
-    val fecha: String,
-    val total: Long,
-    val productos: List<CarritoItem>
+    val id: String = "",
+    val fecha: String = "",
+    val total: Long = 0,
+    val productos: List<CarritoItem> = emptyList()
 )
